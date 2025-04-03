@@ -1,5 +1,6 @@
 # angr_decorator.py
 import angr
+import claripy
 import logging
 
 import time
@@ -59,8 +60,6 @@ class SimgrCLI():
         self.timer = Timer()
         self.simgr_info = SimgrInfo().get_instance()
 
-
-
         self.is_stopped = threading.Event()
 
         self.display_thread = threading.Thread(target=self._run_display)
@@ -97,17 +96,24 @@ class SimgrCLI():
         self.simgr_info.clear()
         self.display_thread.join()
 
+    @staticmethod
+    def _set_loggers_level():
+        logging.getLogger("angr").setLevel(logging.ERROR)
+        logging.getLogger("claripy").setLevel(logging.ERROR)
+
+    @staticmethod
+    def _restore_loggers_level():
+        logging.getLogger("angr").setLevel(logging.WARNING)
+        logging.getLogger("claripy").setLevel(logging.WARNING)
+
 
     @classmethod
     def get_instance(cls):
         is_new_instance = False
         if not hasattr(cls, "_instance"):
             cls._instance = cls()
+            cls._set_loggers_level()
             is_new_instance = True
-
-        # disable angr logger
-        logging.getLogger("angr").propagate = False
-        logging.getLogger("claripy").propagate = False
         return cls._instance, is_new_instance
 
     @classmethod
@@ -118,13 +124,7 @@ class SimgrCLI():
         if hasattr(cls, "_instance"):
             cls._instance.__del__()
 
-        # recover angr logger
-        logging.getLogger("angr").propagate = True
-        logging.getLogger("claripy").propagate = True
-
-
-
-
+        cls._restore_loggers_level()
 
 
 class SimgrInfo():
@@ -228,7 +228,7 @@ def simgr_step_state(*args, **kwargs):
 # weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
 # weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
 
-class Console_Rich:
+class RichCli:
     def __init__(self):
         pass
 
