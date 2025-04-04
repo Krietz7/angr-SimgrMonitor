@@ -7,6 +7,7 @@ import time
 import threading
 from os import getpid
 from psutil import Process
+from collections import Counter
 
 
 import rich
@@ -14,7 +15,7 @@ from queue import Queue, Empty
 import aspectlib
 
 CONSOLE_LIVE_REFRESH_TIME_PER_SECOND = 50
-
+BLOCK_EXECUTION_COUNTS_DISPLAY = 10
 
 
 
@@ -79,8 +80,12 @@ class SimgrCLI():
                     (time_str, "bold green"),
                     (" | [Memory usage] ", "bold cyan"),
                     (self.simgr_info.memory_used, "bold red"),
-                    (" | [sim manager] ", "bold cyan"),
-                    (self.simgr_info.simgr_text, "bold yellow")
+                    ("\n"),
+                    ("[Sim manager stash] ", "bold cyan"),
+                    (self.simgr_info.simgr_text, "bold yellow"),
+                    ("\n"),
+                    ("\n"),
+                    (str(self.simgr_info.retrieve_block_execution_counts()))
                 )
 
                 live.update(display_text)
@@ -96,15 +101,16 @@ class SimgrCLI():
         self.simgr_info.clear()
         self.display_thread.join()
 
-    @staticmethod
-    def _set_loggers_level():
+    @classmethod
+    def _set_loggers_level(cls):
+        cls.original_loggers_level = logging.getLogger("angr").getEffectiveLevel(), logging.getLogger("claripy").getEffectiveLevel()
         logging.getLogger("angr").setLevel(logging.ERROR)
         logging.getLogger("claripy").setLevel(logging.ERROR)
 
-    @staticmethod
-    def _restore_loggers_level():
-        logging.getLogger("angr").setLevel(logging.WARNING)
-        logging.getLogger("claripy").setLevel(logging.WARNING)
+    @classmethod
+    def _restore_loggers_level(cls):
+        logging.getLogger("angr").setLevel(cls.original_loggers_level[0])
+        logging.getLogger("claripy").setLevel(cls.original_loggers_level[1])
 
 
     @classmethod
@@ -129,35 +135,53 @@ class SimgrCLI():
 
 class SimgrInfo():
     def __init__(self):
+        self.project = None
         self.simgr_text = ""
         self.memory_used = ""
 
-
-
+        self.block_execult = []
 
 
         self.need_update = False
 
-    def get_info_from_simgr(self, simgr: angr.sim_manager.SimulationManager):
-        self.simgr_text = str(simgr)
+    def recode_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
+        self.project = simgr._project
 
+        self.simgr_text = str(simgr)
         self.memory_used = self._get_memory_usage()
 
+        self.need_update = True
 
 
+    def recode_state_info(self, state: angr.sim_state.SimState):
+        pass
 
+    def record_successor_info(self, stashes):
+        for key in stashes.keys():
+            for state in stashes[key]:
+                self.block_execult.append(state.history.addr)
 
         self.need_update = True
+
+
+    def retrieve_block_execution_counts(self):
+        execult_statistics = Counter(self.block_execult)
+        execult_statistics_top = execult_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY)
+
+        print_str = ""
+        for address, count  in execult_statistics_top:
+            address_descrition = self.project.loader.describe_addr(address)
+            print_str += address_descrition + " : " + str(count) + "\n"
+        return print_str
 
     def _get_memory_usage(self):
         process = Process(getpid())
         memory_usage = process.memory_info().vms / float(2 ** 30)
         return '{:.4f}'.format(memory_usage) + " GB"
-        
-
 
 
     def clear(self):
+        self.project = None
         self.simgr_text = ""
         self.need_update = False
 
@@ -211,9 +235,11 @@ def simgr_step_state(*args, **kwargs):
     simgr_cli, is_instance_creater = SimgrCLI.get_instance()
     try:
         simgr_info = SimgrInfo.get_instance()
-        simgr_info.get_info_from_simgr(args[0])
+        simgr_info.recode_simgr_info(args[0])
+
 
         result = yield aspectlib.Proceed
+        simgr_info.record_successor_info(result)
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result)
