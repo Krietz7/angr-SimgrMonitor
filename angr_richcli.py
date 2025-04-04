@@ -14,6 +14,8 @@ import rich
 from queue import Queue, Empty
 import aspectlib
 
+# config
+TIMER_ACCURATE_TO_MILLISECONDS = True
 CONSOLE_LIVE_REFRESH_TIME_PER_SECOND = 50
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
 
@@ -35,10 +37,13 @@ class Timer:
             minutes, seconds = divmod(rem, 60)
             milliseconds = int((seconds - int(seconds)) * 1000)
 
-            time_str = (
-                f"{int(hours):02d}:{int(minutes):02d}:"
-                f"{int(seconds):02d}.{milliseconds:03d}"
-            )
+            if TIMER_ACCURATE_TO_MILLISECONDS:
+                time_str = (
+                    f"{int(hours):02d}:{int(minutes):02d}:"
+                    f"{int(seconds):02d}.{milliseconds:03d}"
+                )
+            else:
+                time_str = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
 
             self._flush_queue()
             self.queue.put(time_str)
@@ -201,11 +206,15 @@ class SimgrInfo():
 @aspectlib.Aspect
 def simgr_step(*args, **kwargs):
     simgr_cli, is_instance_creater = SimgrCLI.get_instance()
+    simgr_info = SimgrInfo.get_instance()
+
     try:
-        result = yield aspectlib.Proceed
+        result = yield aspectlib.Proceed # execute the original function
+
+        simgr_info.recode_simgr_info(args[0])
         if is_instance_creater:
             simgr_cli.del_instance()
-        yield aspectlib.Return(result)
+        yield aspectlib.Return(result) # return the result
     except:
         if is_instance_creater:
             simgr_cli.del_instance()
@@ -218,11 +227,15 @@ def simgr_step(*args, **kwargs):
 @aspectlib.Aspect
 def simgr_run(*args, **kwargs):
     simgr_cli, is_instance_creater = SimgrCLI.get_instance()
+    simgr_info = SimgrInfo.get_instance()
+
     try:
-        result = yield aspectlib.Proceed
+        result = yield aspectlib.Proceed # execute the original function
+
+        simgr_info.recode_simgr_info(args[0])
         if is_instance_creater:
             simgr_cli.del_instance()
-        yield aspectlib.Return(result)
+        yield aspectlib.Return(result) # return the result
     except:
         if is_instance_creater:
             simgr_cli.del_instance()
@@ -233,16 +246,16 @@ def simgr_run(*args, **kwargs):
 @aspectlib.Aspect
 def simgr_step_state(*args, **kwargs):
     simgr_cli, is_instance_creater = SimgrCLI.get_instance()
+    simgr_info = SimgrInfo.get_instance()
+
     try:
-        simgr_info = SimgrInfo.get_instance()
         simgr_info.recode_simgr_info(args[0])
 
-
-        result = yield aspectlib.Proceed
+        result = yield aspectlib.Proceed # execute the original function
         simgr_info.record_successor_info(result)
         if is_instance_creater:
             simgr_cli.del_instance()
-        yield aspectlib.Return(result)
+        yield aspectlib.Return(result) # return the result
     except:
         if is_instance_creater:
             simgr_cli.del_instance()
