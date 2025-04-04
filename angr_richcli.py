@@ -18,6 +18,7 @@ import aspectlib
 TIMER_ACCURATE_TO_MILLISECONDS = True
 REFRESH_TIME_PER_SECOND = 50
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
+STATE_CONUNTS_DISPLAY = 5
 CALL_STACK_DEPETH = 2
 
 
@@ -163,20 +164,25 @@ class SimgrInfo():
                 self._target_stash_name = "active"
 
 
-    def recode_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
+    def capture_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._project == None:
             self._project = simgr._project
 
         self.simgr_text = str(simgr)
         self.memory_used = self._get_memory_usage()
 
+        self.capture_target_stash_info(simgr)
+
         self.need_update = True
 
 
+
+
+    def capture_target_stash_info(self, simgr: angr.sim_manager.SimulationManager):
         if(self._target_stash_name != None):
             stashes = simgr.stashes[self._target_stash_name]
             self._target_stash_info.clear()
-            for state in stashes:
+            for state in stashes[0:STATE_CONUNTS_DISPLAY]:
                 state_info = str(state)
                 
                 def get_state_callstack(state):
@@ -193,12 +199,13 @@ class SimgrInfo():
                     return callstack_description
 
                 state_info += "Call Stack:" + str(get_state_callstack(state))
-
                 self._target_stash_info.append(state_info)
 
 
-    def recode_state_info(self, state: angr.sim_state.SimState):
-        pass
+            while(STATE_CONUNTS_DISPLAY - len(self._target_stash_info)>0):
+                self._target_stash_info.append("")
+
+        self.need_update = True
 
     def record_successor_info(self, stashes):
         for key in stashes.keys():
@@ -258,7 +265,7 @@ def simgr_step(*args, **kwargs):
 
         result = yield aspectlib.Proceed # execute the original function
 
-        simgr_info.recode_simgr_info(args[0])
+        simgr_info.capture_simgr_info(args[0])
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result) # return the result
@@ -280,7 +287,7 @@ def simgr_run(*args, **kwargs):
         simgr_info.get_info_from_args(*args, **kwargs)
         result = yield aspectlib.Proceed # execute the original function
 
-        simgr_info.recode_simgr_info(args[0])
+        simgr_info.capture_simgr_info(args[0])
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result) # return the result
@@ -297,7 +304,7 @@ def simgr_step_state(*args, **kwargs):
     simgr_info = SimgrInfo.get_instance()
 
     try:
-        simgr_info.recode_simgr_info(args[0])
+        simgr_info.capture_simgr_info(args[0])
 
         result = yield aspectlib.Proceed # execute the original function
         simgr_info.record_successor_info(result)
