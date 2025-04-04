@@ -183,23 +183,29 @@ class SimgrInfo():
     def capture_target_stash_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._target_stash_name == None:
             return
-        def get_state_callstack(state):
-            stack_suffix = state.callstack.stack_suffix(CALL_STACK_DEPETH)
+        def get_callstack_info(callstack):
+            func_descritions = []
+            for _, frame in enumerate(callstack):  
+                func_addr = frame.func_addr
+                if func_addr is None or func_addr == 0:
+                    break
+                func_descritions.append(self._project.loader.describe_addr(func_addr).split(' in ')[0])
+
             callstack_description = ""
 
-            for address in stack_suffix:
-                if address == 0 or address == None:
-                    break
+            for descrition in func_descritions[::-1]:
                 if callstack_description != "":
                     callstack_description += " -> "
+                callstack_description += descrition
 
-                callstack_description += f"{self._project.loader.describe_addr(address).split(' in ')[0]}"
+            
             return callstack_description
+
 
         stashes = simgr.stashes[self._target_stash_name]
         self._stash_callstack.clear()
         for state in stashes:
-            self._stash_callstack.append(get_state_callstack(state))
+            self._stash_callstack.append(get_callstack_info(state.callstack))
 
         self.need_update = True
 
