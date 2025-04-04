@@ -18,7 +18,7 @@ import aspectlib
 TIMER_ACCURATE_TO_MILLISECONDS = True
 REFRESH_TIME_PER_SECOND = 50
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
-
+CALL_STACK_DEPETH = 2
 
 
 class Timer:
@@ -89,8 +89,9 @@ class SimgrCLI():
                     ("[Sim manager stash] ", "bold cyan"),
                     (self.simgr_info.simgr_text, "bold yellow"),
                     ("\n"),
+                    (self.simgr_info.retrieve_target_stash_info()),
                     ("\n"),
-                    (str(self.simgr_info.retrieve_block_execution_counts()))
+                    (self.simgr_info.retrieve_block_execution_counts())
                 )
 
                 live.update(display_text)
@@ -141,32 +142,59 @@ class SimgrCLI():
 
 class SimgrInfo():
     def __init__(self):
-        self.project = None
         self.simgr_text = ""
         self.memory_used = ""
+        self._project = None
+        self._target_stash_name = None
+        self._target_stash_info = []
 
-        self.target_stash_name = None
-        self.block_execult = []
+
+        self._block_execult = []
 
 
         self.need_update = False
 
     def get_info_from_args(self, *args, **kwargs):
-        self.target_stash_name = kwargs.get("stash", None)
-        if self.target_stash_name == None:
+        self._target_stash_name = kwargs.get("stash", None)
+        if self._target_stash_name == None:
             if len(args) > 1 and isinstance(args[1], str):
-                self.target_stash_name = args[1]
+                self._target_stash_name = args[1]
             else:
-                self.target_stash_name = "active"
+                self._target_stash_name = "active"
 
 
     def recode_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
-        self.project = simgr._project
+        if self._project == None:
+            self._project = simgr._project
 
         self.simgr_text = str(simgr)
         self.memory_used = self._get_memory_usage()
 
         self.need_update = True
+
+
+        if(self._target_stash_name != None):
+            stashes = simgr.stashes[self._target_stash_name]
+            self._target_stash_info.clear()
+            for state in stashes:
+                state_info = str(state)
+                
+                def get_state_callstack(state):
+                    stack_suffix = state.callstack.stack_suffix(CALL_STACK_DEPETH)
+                    callstack_description = ""
+
+                    for address in stack_suffix:
+                        if address == 0 or address == None:
+                            break
+                        if callstack_description != "":
+                            callstack_description += " -> "
+
+                        callstack_description += f"{self._project.loader.describe_addr(address).split(' in ')[0]}"
+                    return callstack_description
+
+                state_info += "Call Stack:" + str(get_state_callstack(state))
+
+                self._target_stash_info.append(state_info)
 
 
     def recode_state_info(self, state: angr.sim_state.SimState):
@@ -175,18 +203,26 @@ class SimgrInfo():
     def record_successor_info(self, stashes):
         for key in stashes.keys():
             for state in stashes[key]:
-                self.block_execult.append(state.history.addr)
+                self._block_execult.append(state.history.addr)
 
         self.need_update = True
 
 
+    def retrieve_target_stash_info(self):
+        print_str = ""
+        for str in self._target_stash_info:
+            print_str += str + "\n"
+
+
+        return print_str
+
     def retrieve_block_execution_counts(self):
-        execult_statistics = Counter(self.block_execult)
+        execult_statistics = Counter(self._block_execult)
         execult_statistics_top = execult_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY)
 
         print_str = ""
         for address, count  in execult_statistics_top:
-            address_descrition = self.project.loader.describe_addr(address)
+            address_descrition = self._project.loader.describe_addr(address)
             print_str += address_descrition + " : " + str(count) + "\n"
         return print_str
 
@@ -275,9 +311,9 @@ def simgr_step_state(*args, **kwargs):
 
 
 
-weave_context_step = aspectlib.weave(angr.sim_manager.SimulationManager.step, simgr_step)
-weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
-weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
+# weave_context_step = aspectlib.weave(angr.sim_manager.SimulationManager.step, simgr_step)
+# weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
+# weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
 
 class RichCli:
     def __init__(self):
