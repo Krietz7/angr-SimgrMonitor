@@ -16,7 +16,7 @@ import aspectlib
 
 # config
 TIMER_ACCURATE_TO_MILLISECONDS = True
-CONSOLE_LIVE_REFRESH_TIME_PER_SECOND = 50
+REFRESH_TIME_PER_SECOND = 50
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
 
 
@@ -47,7 +47,7 @@ class Timer:
 
             self._flush_queue()
             self.queue.put(time_str)
-            time.sleep(0.03)  # 30ms Update interval
+            time.sleep(1 / REFRESH_TIME_PER_SECOND)
 
     def _flush_queue(self):
         while True:
@@ -73,7 +73,7 @@ class SimgrCLI():
 
 
     def _run_display(self):
-        with rich.live.Live(refresh_per_second=CONSOLE_LIVE_REFRESH_TIME_PER_SECOND) as live:
+        with rich.live.Live(refresh_per_second=REFRESH_TIME_PER_SECOND) as live:
             while not self.is_stopped.is_set():
                 try:
                     time_str = self.timer.queue.get(timeout=0.01)
@@ -129,11 +129,12 @@ class SimgrCLI():
 
     @classmethod
     def del_instance(cls):
-        while(cls._instance.simgr_info.need_update == True):
-            time.sleep(0.1)
-
         if hasattr(cls, "_instance"):
+            while(cls._instance.simgr_info.need_update == True):
+                time.sleep(0.1)
+
             cls._instance.__del__()
+            del cls._instance
 
         cls._restore_loggers_level()
 
@@ -144,10 +145,20 @@ class SimgrInfo():
         self.simgr_text = ""
         self.memory_used = ""
 
+        self.target_stash_name = None
         self.block_execult = []
 
 
         self.need_update = False
+
+    def get_info_from_args(self, *args, **kwargs):
+        self.target_stash_name = kwargs.get("stash", None)
+        if self.target_stash_name == None:
+            if len(args) > 1 and isinstance(args[1], str):
+                self.target_stash_name = args[1]
+            else:
+                self.target_stash_name = "active"
+
 
     def recode_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
         self.project = simgr._project
@@ -186,9 +197,7 @@ class SimgrInfo():
 
 
     def clear(self):
-        self.project = None
-        self.simgr_text = ""
-        self.need_update = False
+        self.__init__()
 
     @classmethod
     def get_instance(cls):
@@ -209,6 +218,8 @@ def simgr_step(*args, **kwargs):
     simgr_info = SimgrInfo.get_instance()
 
     try:
+        simgr_info.get_info_from_args(*args, **kwargs)
+
         result = yield aspectlib.Proceed # execute the original function
 
         simgr_info.recode_simgr_info(args[0])
@@ -230,6 +241,7 @@ def simgr_run(*args, **kwargs):
     simgr_info = SimgrInfo.get_instance()
 
     try:
+        simgr_info.get_info_from_args(*args, **kwargs)
         result = yield aspectlib.Proceed # execute the original function
 
         simgr_info.recode_simgr_info(args[0])
@@ -263,9 +275,9 @@ def simgr_step_state(*args, **kwargs):
 
 
 
-# weave_context_step = aspectlib.weave(angr.sim_manager.SimulationManager.step, simgr_step)
-# weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
-# weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
+weave_context_step = aspectlib.weave(angr.sim_manager.SimulationManager.step, simgr_step)
+weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
+weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
 
 class RichCli:
     def __init__(self):
