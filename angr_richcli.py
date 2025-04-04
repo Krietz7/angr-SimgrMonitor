@@ -14,15 +14,18 @@ import rich
 from queue import Queue, Empty
 import aspectlib
 
+
+
+
 # config
 TIMER_ACCURATE_TO_MILLISECONDS = True
 REFRESH_TIME_PER_SECOND = 50
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
-STATE_CONUNTS_DISPLAY = 5
-CALL_STACK_DEPETH = 2
+CALLSTACK_COUNTS_DISPLAY = 10
+CALL_STACK_DEPETH = 3
 
 
-class Timer:
+class SimgrTimer:
     def __init__(self):
         self.start_time = time.time()
         self.is_stopped = threading.Event()
@@ -64,7 +67,7 @@ class Timer:
 
 class SimgrCLI():
     def __init__(self):
-        self.timer = Timer()
+        self.timer = SimgrTimer()
         self.simgr_info = SimgrInfo().get_instance()
 
         self.is_stopped = threading.Event()
@@ -90,9 +93,9 @@ class SimgrCLI():
                     ("[Sim manager stash] ", "bold cyan"),
                     (self.simgr_info.simgr_text, "bold yellow"),
                     ("\n"),
-                    (self.simgr_info.retrieve_target_stash_info()),
+                    (self.simgr_info.retrieve_block_execution_counts()),
                     ("\n"),
-                    (self.simgr_info.retrieve_block_execution_counts())
+                    (self.simgr_info.retrieve_target_stash_stack_count()),
                 )
 
                 live.update(display_text)
@@ -147,10 +150,9 @@ class SimgrInfo():
         self.memory_used = ""
         self._project = None
         self._target_stash_name = None
-        self._target_stash_info = []
-
 
         self._block_execult = []
+        self._stash_callstack = []
 
 
         self.need_update = False
@@ -179,31 +181,25 @@ class SimgrInfo():
 
 
     def capture_target_stash_info(self, simgr: angr.sim_manager.SimulationManager):
-        if(self._target_stash_name != None):
-            stashes = simgr.stashes[self._target_stash_name]
-            self._target_stash_info.clear()
-            for state in stashes[0:STATE_CONUNTS_DISPLAY]:
-                state_info = str(state)
-                
-                def get_state_callstack(state):
-                    stack_suffix = state.callstack.stack_suffix(CALL_STACK_DEPETH)
-                    callstack_description = ""
+        if self._target_stash_name == None:
+            return
+        def get_state_callstack(state):
+            stack_suffix = state.callstack.stack_suffix(CALL_STACK_DEPETH)
+            callstack_description = ""
 
-                    for address in stack_suffix:
-                        if address == 0 or address == None:
-                            break
-                        if callstack_description != "":
-                            callstack_description += " -> "
+            for address in stack_suffix:
+                if address == 0 or address == None:
+                    break
+                if callstack_description != "":
+                    callstack_description += " -> "
 
-                        callstack_description += f"{self._project.loader.describe_addr(address).split(' in ')[0]}"
-                    return callstack_description
+                callstack_description += f"{self._project.loader.describe_addr(address).split(' in ')[0]}"
+            return callstack_description
 
-                state_info += "Call Stack:" + str(get_state_callstack(state))
-                self._target_stash_info.append(state_info)
-
-
-            while(STATE_CONUNTS_DISPLAY - len(self._target_stash_info)>0):
-                self._target_stash_info.append("")
+        stashes = simgr.stashes[self._target_stash_name]
+        self._stash_callstack.clear()
+        for state in stashes:
+            self._stash_callstack.append(get_state_callstack(state))
 
         self.need_update = True
 
@@ -215,10 +211,16 @@ class SimgrInfo():
         self.need_update = True
 
 
-    def retrieve_target_stash_info(self):
+    def retrieve_target_stash_stack_count(self):
+        stash_stack_statistics = Counter(self._stash_callstack)
+        stash_stack_statistics_top = stash_stack_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY)
+
         print_str = ""
-        for str in self._target_stash_info:
-            print_str += str + "\n"
+        for address_descrition, count in stash_stack_statistics_top:
+            print_str += address_descrition + " : " + str(count) + "\n"
+
+        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
+            print_str += "\n"
 
 
         return print_str
@@ -231,6 +233,10 @@ class SimgrInfo():
         for address, count  in execult_statistics_top:
             address_descrition = self._project.loader.describe_addr(address)
             print_str += address_descrition + " : " + str(count) + "\n"
+
+        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(execult_statistics_top)):
+            print_str += "\n"
+
         return print_str
 
     def _get_memory_usage(self):
@@ -247,11 +253,6 @@ class SimgrInfo():
         if not hasattr(cls, "_instance"):
             cls._instance = cls()
         return cls._instance
-
-
-
-
-
 
 
 
