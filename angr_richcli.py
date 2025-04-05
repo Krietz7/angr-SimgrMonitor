@@ -16,13 +16,23 @@ import aspectlib
 
 
 
+'''
+This decorator measures the execution status of angr.simulation_manager methods (run, step, and explore).
+It provides real-time monitoring through a timer thread and displays execution statistics, including block
+execution frequency and callstack distribution.
+
+Parameters:
+- REFRESH_TIME_PER_SECOND: The number of times the monitoring is updated in one second.
+- TIMER_ACCURATE_TO_MILLISECONDS: If True, the timer will display milliseconds; otherwise, it will only show seconds.
+- BLOCK_EXECUTION_COUNTS_DISPLAY: The number of most frequently executed blocks to display.
+- CALLSTACK_COUNTS_DISPLAY: The number of most frequent callstacks to display.
+'''
 
 # config
-TIMER_ACCURATE_TO_MILLISECONDS = True
 REFRESH_TIME_PER_SECOND = 50
+TIMER_ACCURATE_TO_MILLISECONDS = True
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
 CALLSTACK_COUNTS_DISPLAY = 10
-CALL_STACK_DEPETH = 3
 
 
 class SimgrTimer:
@@ -30,6 +40,7 @@ class SimgrTimer:
         self.start_time = time.time()
         self.is_stopped = threading.Event()
         self.queue = Queue()
+        self.update_interval = 1 / REFRESH_TIME_PER_SECOND
         self.thread = threading.Thread(target=self._run)
         self.thread.start()
 
@@ -51,7 +62,7 @@ class SimgrTimer:
 
             self._flush_queue()
             self.queue.put(time_str)
-            time.sleep(1 / REFRESH_TIME_PER_SECOND)
+            time.sleep(self.update_interval)
 
     def _flush_queue(self):
         while True:
@@ -88,7 +99,7 @@ class SimgrCLI():
                     ("[Timer] ", "bold cyan"),
                     (time_str, "bold green"),
                     (" | [Memory usage] ", "bold cyan"),
-                    (self.simgr_info.memory_used, "bold red"),
+                    (self.simgr_info.memory_usage, "bold red"),
                     ("\n"),
                     ("[Sim manager stash] ", "bold cyan"),
                     (self.simgr_info.simgr_text, "bold yellow"),
@@ -145,9 +156,10 @@ class SimgrCLI():
 
 
 class SimgrInfo():
+
     def __init__(self):
         self.simgr_text = ""
-        self.memory_used = ""
+        self.memory_usage = ""
         self._project = None
         self._target_stash_name = None
 
@@ -171,7 +183,8 @@ class SimgrInfo():
             self._project = simgr._project
 
         self.simgr_text = str(simgr)
-        self.memory_used = self._get_memory_usage()
+        self.memory_usage = self._get_memory_usage()
+
 
         self.capture_target_stash_info(simgr)
 
@@ -245,7 +258,8 @@ class SimgrInfo():
 
         return print_str
 
-    def _get_memory_usage(self):
+    @staticmethod
+    def _get_memory_usage():
         process = Process(getpid())
         memory_usage = process.memory_info().vms / float(2 ** 30)
         return '{:.4f}'.format(memory_usage) + " GB"
