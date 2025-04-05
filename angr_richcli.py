@@ -87,29 +87,54 @@ class SimgrCLI():
         self.display_thread.start()
 
 
+    def _get_display_assemble(self):
+        try:
+            time_str = self.timer.queue.get(timeout=0.01)
+        except Empty:
+            return None
+
+        # Display Basic Information
+        display_content = [("[Timer] ", "bold cyan"),(time_str, "bold green"),
+                (" | [Memory usage] ", "bold cyan"),(self.simgr_info.memory_usage, "bold red"),
+                (" | [Sim manager stash] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
+
+        # Display Blocks Execution Statistics
+        execution_count_statistics,execution_count_top = self.simgr_info.retrieve_block_execution_statistics()
+        display_content.append(("\n-----------------------[Blocks Execution Statistics]----------------------------\n", "bold cyan"))
+        display_content += (("Total execution times: ", "bold magenta"),(str(execution_count_statistics),"bold magenta"),"\n")
+
+        for address_describtion,value in execution_count_top:
+            display_content += [address_describtion, " : ", str(value), str("\n")]
+        for _ in range(BLOCK_EXECUTION_COUNTS_DISPLAY - len(execution_count_top)):
+            display_content.append("\n")
+
+        display_content.append(("\n--------------------------[Callstack Statistics]--------------------------------\n", "bold cyan")),
+
+        # Display Callstack Statistics
+        stash_stack_statistics_top = self.simgr_info.retrieve_states_callstack_statistics()
+        for callstack_describiton,value in stash_stack_statistics_top:
+            display_content += [callstack_describiton, " : ", str(value), str("\n")]
+        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
+            display_content.append("\n")
+
+        display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
+
+        return  tuple(display_content)
+
+
+
+
+
+
+
+
     def _run_display(self):
         with rich.live.Live(refresh_per_second=REFRESH_TIME_PER_SECOND) as live:
             while not self.is_stopped.is_set():
-                try:
-                    time_str = self.timer.queue.get(timeout=0.01)
-                except Empty:
+                display_content = self._get_display_assemble()
+                if display_content == None:
                     continue
-
-                display_text = rich.text.Text.assemble(
-                    ("[Timer] ", "bold cyan"),
-                    (time_str, "bold green"),
-                    (" | [Memory usage] ", "bold cyan"),
-                    (self.simgr_info.memory_usage, "bold red"),
-                    ("\n"),
-                    ("[Sim manager stash] ", "bold cyan"),
-                    (self.simgr_info.simgr_text, "bold yellow"),
-                    ("\n"),
-                    (self.simgr_info.retrieve_block_execution_counts()),
-                    ("\n"),
-                    (self.simgr_info.retrieve_target_stash_stack_count()),
-                )
-
-                live.update(display_text)
+                live.update(rich.text.Text.assemble(*display_content))
                 self.simgr_info.need_update = False
 
     def stop(self):
@@ -229,34 +254,17 @@ class SimgrInfo():
 
         self.need_update = True
 
-
-    def retrieve_target_stash_stack_count(self):
-        stash_stack_statistics = Counter(self._stash_callstack)
-        stash_stack_statistics_top = stash_stack_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY)
-
-        print_str = ""
-        for address_descrition, count in stash_stack_statistics_top:
-            print_str += address_descrition + " : " + str(count) + "\n"
-
-        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
-            print_str += "\n"
-
-
-        return print_str
-
-    def retrieve_block_execution_counts(self):
+    def retrieve_block_execution_statistics(self):
         execult_statistics = Counter(self._block_execult)
-        execult_statistics_top = execult_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY)
-
-        print_str = ""
-        for address, count  in execult_statistics_top:
-            address_descrition = self._project.loader.describe_addr(address)
-            print_str += address_descrition + " : " + str(count) + "\n"
-
-        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(execult_statistics_top)):
-            print_str += "\n"
-
-        return print_str
+        execution_count_statistics = execult_statistics.total()
+        execution_count_top = []
+        for address, count in execult_statistics.most_common(BLOCK_EXECUTION_COUNTS_DISPLAY):
+            execution_count_top.append((self._project.loader.describe_addr(address), count))
+        return execution_count_statistics,execution_count_top
+    
+    def retrieve_states_callstack_statistics(self):
+        stash_stack_statistics = Counter(self._stash_callstack)
+        return stash_stack_statistics.most_common(CALLSTACK_COUNTS_DISPLAY)
 
     @staticmethod
     def _get_memory_usage():
