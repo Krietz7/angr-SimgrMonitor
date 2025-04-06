@@ -1,6 +1,11 @@
 ## angr-SimgrMonitor
 A non-intrusive monitoring tool for angr framework, designed to track the execution status of `SimulationManager` in real-time. Integrated via decorator pattern, it requires no code modification to collect critical runtime metrics, with real-time visualization powered by rich library.
 
+This tool is designed to help users detect common symbolic execution risks early through real-time monitoring, including:
+- Path Explosion
+- Complex external Call
+- Execution Optimization
+
 ### Key Features
 - Real-time Timing: Millisecond-precise execution time tracking
 
