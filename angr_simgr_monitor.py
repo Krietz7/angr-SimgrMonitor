@@ -96,7 +96,7 @@ class SimgrCLI():
         # Display Basic Information
         display_content = [("[Timer] ", "bold cyan"),(time_str, "bold green"),
                 (" | [Memory usage] ", "bold cyan"),(self.simgr_info.memory_usage, "bold red"),
-                (" | [Sim manager stash] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
+                ("\n[Sim manager stash] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
 
         # Display Blocks Execution Statistics
         execution_count_statistics,execution_count_top = self.simgr_info.retrieve_block_execution_statistics()
@@ -116,7 +116,6 @@ class SimgrCLI():
             display_content += [callstack_describiton, " : ", str(value), str("\n")]
         for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
             display_content.append("\n")
-
         display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
 
         return  tuple(display_content)
@@ -235,6 +234,8 @@ class SimgrInfo():
                 if callstack_description != "":
                     callstack_description += " -> "
                 callstack_description += descrition
+            # if(len(callstack_description) > 80):
+            #     callstack_description = "..." + callstack_description[:77].split(' -> ',1)[-1]
 
             
             return callstack_description
@@ -243,7 +244,11 @@ class SimgrInfo():
         stashes = simgr.stashes[self._target_stash_name]
         self._stash_callstack.clear()
         for state in stashes:
-            self._stash_callstack.append(get_callstack_info(state.callstack))
+            callstack_description = get_callstack_info(state.callstack)
+            if callstack_description == "":
+                self._stash_callstack.append("Empty callstack")
+            else:
+                self._stash_callstack.append(callstack_description)
 
         self.need_update = True
 
@@ -351,7 +356,7 @@ def simgr_step_state(*args, **kwargs):
 # weave_context_run = aspectlib.weave(angr.sim_manager.SimulationManager.run, simgr_run)
 # weave_context_step_state = aspectlib.weave(angr.sim_manager.SimulationManager.step_state, simgr_step_state)
 
-class RichCli:
+class monitored_simgr():
     def __init__(self):
         pass
 
