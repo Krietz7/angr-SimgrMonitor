@@ -77,6 +77,11 @@ class SimgrTimer:
 
 
 class SimgrCLI():
+    def __new__(cls):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         self.timer = SimgrTimer()
         self.simgr_info = SimgrInfo().get_instance()
@@ -119,13 +124,6 @@ class SimgrCLI():
         display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
 
         return  tuple(display_content)
-
-
-
-
-
-
-
 
     def _run_display(self):
         with rich.live.Live(refresh_per_second=REFRESH_TIME_PER_SECOND) as live:
@@ -180,6 +178,10 @@ class SimgrCLI():
 
 
 class SimgrInfo():
+    def __new__(cls):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
         self.simgr_text = ""
@@ -252,7 +254,7 @@ class SimgrInfo():
 
         self.need_update = True
 
-    def record_successor_info(self, stashes):
+    def capture_successor_info(self, stashes):
         for key in stashes.keys():
             for state in stashes[key]:
                 self._block_execult.append(state.history.addr)
@@ -277,17 +279,14 @@ class SimgrInfo():
         memory_usage = process.memory_info().vms / float(2 ** 30)
         return '{:.4f}'.format(memory_usage) + " GB"
 
-
-    def clear(self):
-        self.__init__()
-
     @classmethod
     def get_instance(cls):
         if not hasattr(cls, "_instance"):
             cls._instance = cls()
         return cls._instance
 
-
+    def clear(self):
+        self.__init__()
 
 @aspectlib.Aspect
 def simgr_step(*args, **kwargs):
@@ -341,7 +340,7 @@ def simgr_step_state(*args, **kwargs):
         simgr_info.capture_simgr_info(args[0])
 
         result = yield aspectlib.Proceed # execute the original function
-        simgr_info.record_successor_info(result)
+        simgr_info.capture_successor_info(result)
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result) # return the result
