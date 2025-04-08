@@ -92,55 +92,117 @@ class SimgrCLI():
         self.display_thread.start()
 
 
+
     def _get_display_assemble(self):
         try:
             time_str = self.timer.queue.get(timeout=0.01)
         except Empty:
             return None
 
-        # Display Basic Information
-        display_content = [("[Timer] ", "bold cyan"),(time_str, "bold green"),
-                (" | [Memory usage] ", "bold cyan"),(self.simgr_info.memory_usage, "bold red"),
-                ("\n[Sim manager stashes] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
+        # color theme
+        THEME = {
+            "title": "bold cyan",
+            "highlight": "bold green",
+            "warning": "bold yellow",
+            "metric": "default",
+            "addr": "bright_magenta",
+            "symbol": "blue",
+            "separator": "dim blue",
+            "text": ""
+        }
 
-        # Display Blocks Execution Statistics
-        execution_count_statistics,execution_count_top = self.simgr_info.retrieve_block_execution_statistics()
-        display_content.append(("\n-----------------------[Blocks Execution Statistics]----------------------------\n", "bold cyan"))
-        display_content += (("Total execution times: ", "bold magenta"),(str(execution_count_statistics),"bold magenta"),"\n")
+        display_content = []
 
-        for address_describtion,value in execution_count_top:
-            display_content += [address_describtion, " : ", str(value), str("\n")]
-        for _ in range(BLOCK_EXECUTION_COUNTS_DISPLAY - len(execution_count_top)):
-            display_content.append("\n")
+        # --------------------- Header Information ---------------------
+        display_content += [
+            ("[Time]", THEME["title"]), (time_str, THEME["highlight"]),
+            (" │ ", THEME["separator"]),
+            ("[Memory usage]", THEME["title"]), (self.simgr_info.memory_usage, THEME["warning"]),
+            ("\n\n", THEME["separator"])
+        ]
 
-        display_content.append(("\n--------------------------[Callstack Statistics]--------------------------------\n", "bold cyan")),
+        # --------------------- Stash Information ---------------------
+        display_content += [
+            ("[SIMGR STASH STATUS]\n", THEME["title"]),
+            (self.simgr_info.simgr_text, THEME["metric"]),
+            ("\n" + "─" * 80 + "\n", THEME["separator"])
+        ]
 
-        # Display Callstack Statistics
-        stash_stack_statistics_top = self.simgr_info.retrieve_states_callstack_statistics()
-        for callstack_describiton,value in stash_stack_statistics_top:
-            display_content += [callstack_describiton, " : ", str(value), str("\n")]
-        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
-            display_content.append("\n")
+        # --------------------- Blocks Execution Statistics ---------------------
+        exec_stats, exec_top = self.simgr_info.retrieve_block_execution_statistics()
+        display_content += [
+            ("EXECUTED BLOCKS\n", THEME["title"]),
+            (f"Total executions: {exec_stats}\n", THEME["metric"])
+        ]
 
-        display_content.append(("\n----------------------------[Symbol Statistics]---------------------------------\n", "bold cyan"))
+        for addr_desc, count in exec_top:
+            display_content += [
+                ("▪ ", THEME["separator"]),
+                (addr_desc, THEME["addr"]),
+                (" : ", THEME["separator"]),
+                (f"{count}\n", THEME["metric"])
+        ]
+        for _ in range(BLOCK_EXECUTION_COUNTS_DISPLAY - len(exec_top)):
+            display_content += [
+                ("▪ ", THEME["separator"]),
+                ("", THEME["addr"]),
+                (" : ", THEME["separator"]),
+                ("0\n", THEME["metric"])
+            ]
 
-        # Display Symbol Statistics
-        stash_symbol_statistics_top = self.simgr_info.retrieve_states_symbol_statistics()
-        for symbol_name,value in stash_symbol_statistics_top:
-            display_content += [symbol_name, " : ", str(value["count"]),",  ", "{:.1f}".format(value["avg_depth"]), str("\n")]
-        for _ in range(SYMBOL_COUNTS_DISPLAY - len(stash_symbol_statistics_top)):
-            display_content.append("\n")
-        display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
+        display_content.append(("─" * 80 + "\n", THEME["separator"]))
 
-        return  tuple(display_content)
+        # --------------------- Callstack Statistics ---------------------
+        callstack_stats = self.simgr_info.retrieve_states_callstack_statistics()
+        display_content += [("CALLSTACK DISTRIBUTION\n", THEME["title"])]
+
+        for formatted_stack, count in callstack_stats[:CALLSTACK_COUNTS_DISPLAY]:
+            display_content += [
+                ("├─ ", THEME["separator"]),
+                (formatted_stack, THEME["text"]),
+                (" : ", THEME["separator"]),
+                (f"{count}\n", THEME["metric"])
+            ]
+        for _ in range(CALLSTACK_COUNTS_DISPLAY - len(callstack_stats)):
+            display_content += [
+                ("├─ ", THEME["separator"]),
+                ("", THEME["text"]),
+                (" : ", THEME["separator"]),
+                ("0\n", THEME["metric"])
+            ]
+        display_content.append(("─" * 80 + "\n", THEME["separator"]))
+
+        # --------------------- Symbol Statistics ---------------------
+        symbol_stats = self.simgr_info.retrieve_states_symbol_statistics()
+        display_content += [("SYMBOLIC VARIABLES\n", THEME["title"])]
+
+        for sym_name, data in symbol_stats[:SYMBOL_COUNTS_DISPLAY]:
+            display_content += [
+                ("◇ ", THEME["separator"]),
+                (f"{sym_name}: ", THEME["symbol"]),
+                (f"{data['count']} uses", THEME["metric"]),
+                (" │ Depth: ", THEME["separator"]),
+                (f"{data['avg_depth']:.1f}\n", THEME["warning"])
+            ]
+        for _ in range(SYMBOL_COUNTS_DISPLAY - len(symbol_stats)):
+            display_content += [
+                ("◇ ", THEME["separator"]),
+                ("", THEME["symbol"]),
+                ("0 uses", THEME["metric"]),
+                (" │ Depth: ", THEME["separator"]),
+                ("0.0\n", THEME["warning"])
+            ]
+        display_content.append(("─" * 80 + "\n", THEME["separator"]))
+
+        return rich.text.Text.assemble(*display_content)
 
     def _run_display(self):
-        with rich.live.Live(refresh_per_second=REFRESH_TIME_PER_SECOND) as live:
+        with rich.live.Live(
+            refresh_per_second=REFRESH_TIME_PER_SECOND
+        ) as live:
             while not self.is_stopped.is_set():
-                display_content = self._get_display_assemble()
-                if display_content == None:
-                    continue
-                live.update(rich.text.Text.assemble(*display_content))
+                if content := self._get_display_assemble():
+                    live.update(content)
                 self.simgr_info.need_update = False
 
     def stop(self):
