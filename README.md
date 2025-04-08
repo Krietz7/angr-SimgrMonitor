@@ -1,11 +1,15 @@
 ## angr-SimgrMonitor
+
+[中文](README.zh_CN.md)
+
 A non-intrusive monitoring tool for angr framework, designed to track the execution status of `SimulationManager` in real-time. Integrated via decorator pattern, it requires no code modification to collect critical runtime metrics, with real-time visualization powered by rich library.
 
-This tool is designed to help users detect common symbolic execution risks early through real-time monitoring, including:
+This tool is designed to help users detect common symbolic execution risks early and identify optimization solutions through real-time monitoring, including:
 - Path Explosion
 - Complex external Call
-- Execution Optimization
-
+- Perform path optimization
+- Symbol variable concrete
+ 
 ### Key Features
 - Real-time Timing: Millisecond-precise execution time tracking
 
@@ -16,6 +20,8 @@ This tool is designed to help users detect common symbolic execution risks early
 - Focus Blocks Analysis: Track most frequently executed basic blocks
 
 - Callstack Profiling: Statistics the distribution of different callstack states
+
+- Symbol variable statistics: statistics and analyze the constraint complexity of different symbol variables
 
 ### Dependencies
 - `aspectlib` module
