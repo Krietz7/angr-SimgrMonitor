@@ -7,8 +7,7 @@ import time
 import threading
 from os import getpid
 from psutil import Process
-from collections import Counter
-
+from collections import Counter, defaultdict
 
 import rich
 from queue import Queue, Empty
@@ -33,6 +32,7 @@ REFRESH_TIME_PER_SECOND = 50
 TIMER_ACCURATE_TO_MILLISECONDS = True
 BLOCK_EXECUTION_COUNTS_DISPLAY = 10
 CALLSTACK_COUNTS_DISPLAY = 10
+SYMBOL_COUNTS_DISPLAY = 10
 
 
 class SimgrTimer:
@@ -101,7 +101,7 @@ class SimgrCLI():
         # Display Basic Information
         display_content = [("[Timer] ", "bold cyan"),(time_str, "bold green"),
                 (" | [Memory usage] ", "bold cyan"),(self.simgr_info.memory_usage, "bold red"),
-                ("\n[Sim manager stash] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
+                ("\n[Sim manager stashes] ", "bold cyan"),(self.simgr_info.simgr_text, "bold yellow")]
 
         # Display Blocks Execution Statistics
         execution_count_statistics,execution_count_top = self.simgr_info.retrieve_block_execution_statistics()
@@ -121,7 +121,20 @@ class SimgrCLI():
             display_content += [callstack_describiton, " : ", str(value), str("\n")]
         for _ in range(CALLSTACK_COUNTS_DISPLAY - len(stash_stack_statistics_top)):
             display_content.append("\n")
+
+        display_content.append(("\n----------------------------[Symbol Statistics]---------------------------------\n", "bold cyan"))
+
+        # Display Symbol Statistics
+        stash_symbol_statistics_top = self.simgr_info.retrieve_states_symbol_statistics()
+        for symbol_name,value in stash_symbol_statistics_top:
+            display_content += [symbol_name, " : ", str(value), str("\n")]
+        for _ in range(SYMBOL_COUNTS_DISPLAY - len(stash_symbol_statistics_top)):
+            display_content.append("\n")
         display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
+
+
+
+
 
         return  tuple(display_content)
 
@@ -191,6 +204,7 @@ class SimgrInfo():
 
         self._block_execult = []
         self._stash_callstack = []
+        self.symbol_counts = []
 
 
         self.need_update = False
@@ -212,14 +226,13 @@ class SimgrInfo():
         self.memory_usage = self._get_memory_usage()
 
 
-        self.capture_target_stash_info(simgr)
+        self.capture_callstack_info(simgr)
+        self.capture_sympol_info(simgr)
 
         self.need_update = True
 
 
-
-
-    def capture_target_stash_info(self, simgr: angr.sim_manager.SimulationManager):
+    def capture_callstack_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._target_stash_name == None:
             return
         def get_callstack_info(callstack):
@@ -254,6 +267,25 @@ class SimgrInfo():
 
         self.need_update = True
 
+    def capture_sympol_info(self, simgr: angr.sim_manager.SimulationManager):
+        if self._target_stash_name == None:
+            return
+
+        def analyze_symbol_references(state: angr.sim_state.SimState, symbol_counts):
+            for constraint in state.solver.constraints:
+                for name in constraint.variables:
+                    symbol_counts[name] += 1
+
+        stashes = simgr.stashes[self._target_stash_name]
+        symbol_counts = defaultdict(int)
+
+        for state in stashes:
+            analyze_symbol_references(state,symbol_counts)
+
+        self.symbol_counts = sorted(symbol_counts.items(), key=lambda x: x[1], reverse=True)
+
+        self.need_update = True
+
     def capture_successor_info(self, stashes):
         for key in stashes.keys():
             for state in stashes[key]:
@@ -272,6 +304,9 @@ class SimgrInfo():
     def retrieve_states_callstack_statistics(self):
         stash_stack_statistics = Counter(self._stash_callstack)
         return stash_stack_statistics.most_common(CALLSTACK_COUNTS_DISPLAY)
+
+    def retrieve_states_symbol_statistics(self):
+        return self.symbol_counts[0:SYMBOL_COUNTS_DISPLAY]
 
     @staticmethod
     def _get_memory_usage():
