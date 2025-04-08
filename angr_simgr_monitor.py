@@ -127,14 +127,10 @@ class SimgrCLI():
         # Display Symbol Statistics
         stash_symbol_statistics_top = self.simgr_info.retrieve_states_symbol_statistics()
         for symbol_name,value in stash_symbol_statistics_top:
-            display_content += [symbol_name, " : ", str(value), str("\n")]
+            display_content += [symbol_name, " : ", str(value["count"]),",  ", "{:.1f}".format(value["avg_depth"]), str("\n")]
         for _ in range(SYMBOL_COUNTS_DISPLAY - len(stash_symbol_statistics_top)):
             display_content.append("\n")
         display_content.append(("\n--------------------------------------------------------------------------------\n", "bold cyan"))
-
-
-
-
 
         return  tuple(display_content)
 
@@ -273,16 +269,28 @@ class SimgrInfo():
 
         def analyze_symbol_references(state: angr.sim_state.SimState, symbol_counts):
             for constraint in state.solver.constraints:
+                depth = constraint.depth
                 for name in constraint.variables:
-                    symbol_counts[name] += 1
+                    symbol_counts[name]['count'] += 1
+                    symbol_counts[name]['total_depth'] += depth
 
         stashes = simgr.stashes[self._target_stash_name]
-        symbol_counts = defaultdict(int)
+        symbol_metrics  = defaultdict(lambda: {'count': 0, 'total_depth': 0})
 
         for state in stashes:
-            analyze_symbol_references(state,symbol_counts)
+            analyze_symbol_references(state, symbol_metrics)
 
-        self.symbol_counts = sorted(symbol_counts.items(), key=lambda x: x[1], reverse=True)
+        self.symbol_metrics = {
+            name: {
+                'count': metrics['count'],
+                'avg_depth': metrics['total_depth'] / metrics['count']
+            }
+            for name, metrics in symbol_metrics.items()
+        }
+        self.symbol_counts = sorted(
+            self.symbol_metrics.items(), 
+        key=lambda x: (-x[1]['count'], -x[1]['avg_depth'])
+        )
 
         self.need_update = True
 
