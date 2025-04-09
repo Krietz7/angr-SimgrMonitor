@@ -48,7 +48,8 @@ with monitored_simgr():
 
 观察具体的符号变量约束，出现了`mem_7ffffffffff0048`(angr进入空状态时rsp指向的默认位置)与`mem_ffffffffffffffxx`()，采取符号变量具体化策略：
 
-![image](https://github.com/user-attachments/assets/488d7f23-c547-439c-8189-3b7610164b4a)
+
+![image](https://github.com/user-attachments/assets/0893474c-ce77-4eac-be45-94c531e00106)
 
 使用IDA分析确定用户输入保存的地址
 
