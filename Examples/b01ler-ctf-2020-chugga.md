@@ -52,7 +52,7 @@ Successfully found a `state` satisfying `found`
 Observing the specific symbol variable constraints, including `mem_7ffffffffff0048` (the default position pointed to by rsp when angr enters the empty state) 
 and `mem_ffffffffffffxx`(), and the symbol variable concrete strategy is adopted:
 
-![image](https://github.com/user-attachments/assets/488d7f23-c547-439c-8189-3b7610164b4a)
+![image](https://github.com/user-attachments/assets/0893474c-ce77-4eac-be45-94c531e00106)
 
 Use IDA analysis to determine the user input saved address
 ```python
