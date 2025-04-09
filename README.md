@@ -32,7 +32,7 @@ This tool is designed to help users detect common symbolic execution risks early
 ### Installation
 ```python
 # Clone repository
-git clone https://github.com/yourusername/angr-simgr-monitor.git
+git clone https://github.com/Krietz7/angr-SimgrMonitor
 cd angr-simgr-monitor
 
 # Install (auto-handles dependencies)
