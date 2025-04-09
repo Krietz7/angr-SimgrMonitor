@@ -28,7 +28,7 @@
 
 ### 安装
 
-``` python
+```bash
 # 克隆仓库
 git clone https://github.com/Krietz7/angr-SimgrMonitor
 cd angr-SimgrMonitor

@@ -30,7 +30,7 @@ This tool is designed to help users detect common symbolic execution risks early
 - `rich` module
 
 ### Installation
-```python
+```bash
 # Clone repository
 git clone https://github.com/Krietz7/angr-SimgrMonitor
 cd angr-SimgrMonitor
