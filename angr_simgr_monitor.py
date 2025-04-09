@@ -248,6 +248,14 @@ class SimgrCLI():
 
         cls._restore_loggers_level()
 
+
+class RateLimiter:
+    _global_override_flag = False
+
+    @classmethod
+    def set_global_override(cls, enable: bool):
+        cls._global_override_flag = enable
+
 def smooth_rate_limited(max_calls, period):
     """
     Decorator, limits the interval of function execution and makes it tend to be averaged
@@ -262,6 +270,9 @@ def smooth_rate_limited(max_calls, period):
         
         @wraps(func)
         def wrapper(*args, **kwargs):
+            if RateLimiter._global_override_flag:
+                return func(*args, **kwargs)
+
             nonlocal timestamps
             with lock:
                 now = time.time()
@@ -440,8 +451,9 @@ def simgr_step(*args, **kwargs):
         simgr_info.get_info_from_args(*args, **kwargs)
 
         result = yield aspectlib.Proceed # execute the original function
-
+        RateLimiter.set_global_override(True)
         simgr_info.capture_simgr_info(args[0])
+        RateLimiter.set_global_override(False)
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result) # return the result
@@ -463,7 +475,9 @@ def simgr_run(*args, **kwargs):
         simgr_info.get_info_from_args(*args, **kwargs)
         result = yield aspectlib.Proceed # execute the original function
 
+        RateLimiter.set_global_override(True)
         simgr_info.capture_simgr_info(args[0])
+        RateLimiter.set_global_override(False)
         if is_instance_creater:
             simgr_cli.del_instance()
         yield aspectlib.Return(result) # return the result
