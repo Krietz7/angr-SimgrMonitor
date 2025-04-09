@@ -59,6 +59,12 @@ with monitored_simgr():  # <-- Core decorator
     sm.run()             # Supports run()/step()/explore() methods
 ```
 
+### ScreenShot
+![image](https://github.com/user-attachments/assets/091f2363-671a-46ba-bddd-fab4be9d3722)
+
+for more infomation, see: [Examples](./Examples)
+
+
 
 ### Advanced Configuration
 ```python
