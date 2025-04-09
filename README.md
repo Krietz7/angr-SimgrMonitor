@@ -62,8 +62,15 @@ with monitored_simgr():  # <-- Core decorator
 
 ### Advanced Configuration
 ```python
-REFRESH_TIME_PER_SECOND = (int)           # Refresh interval (ms)
-TIMER_ACCURATE_TO_MILLISECONDS = (bool)   # Enable millisecond precision
-BLOCK_EXECUTION_COUNTS_DISPLAY = (int)    # Number of foucs blocks to display
-CALLSTACK_COUNTS_DISPLAY = (int)          # Number of callstack types to show
+# Monitor refresh frequency per second. To reduce the performance impact of this tool, please try to lower the configuration item
+REFRESH_TIME_PER_SECOND = (int)
+
+# Enable millisecond precision
+TIMER_ACCURATE_TO_MILLISECONDS = (bool)  
+
+# Number of foucs blocks to display
+BLOCK_EXECUTION_COUNTS_DISPLAY = (int) 
+
+# Number of callstack types to show
+CALLSTACK_COUNTS_DISPLAY = (int)
 ```

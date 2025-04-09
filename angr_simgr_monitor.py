@@ -248,6 +248,41 @@ class SimgrCLI():
 
         cls._restore_loggers_level()
 
+def smooth_rate_limited(max_calls, period):
+    """
+    Decorator, limits the interval of function execution and makes it tend to be averaged
+    :param max_calls: Maximum number of calls in a period
+    :param period:    Time period (seconds)
+    """
+    min_interval = period / max_calls
+    
+    def decorator(func):
+        timestamps = []
+        lock = threading.Lock()
+        
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal timestamps
+            with lock:
+                now = time.time()
+                valid_window = now - period
+                timestamps = [ts for ts in timestamps if ts > valid_window]
+                
+                if len(timestamps) >= max_calls:
+                    # More than {max_calls} calls within the period
+                    return
+                if timestamps:
+                    last_call = timestamps[-1]
+                    elapsed = now - last_call
+                    if elapsed < min_interval:
+                        # Too frequent function calls
+                        return
+                # Record this call
+                timestamps.append(now)
+                
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 class SimgrInfo():
     def __new__(cls):
@@ -277,6 +312,7 @@ class SimgrInfo():
                 self._target_stash_name = "active"
 
 
+    @smooth_rate_limited(REFRESH_TIME_PER_SECOND, 1)
     def capture_simgr_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._project == None:
             self._project = simgr._project
@@ -290,7 +326,7 @@ class SimgrInfo():
 
         self.need_update = True
 
-
+    @smooth_rate_limited(REFRESH_TIME_PER_SECOND, 1)
     def capture_callstack_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._target_stash_name == None:
             return
@@ -326,6 +362,7 @@ class SimgrInfo():
 
         self.need_update = True
 
+    @smooth_rate_limited(REFRESH_TIME_PER_SECOND, 1)
     def capture_sympol_info(self, simgr: angr.sim_manager.SimulationManager):
         if self._target_stash_name == None:
             return

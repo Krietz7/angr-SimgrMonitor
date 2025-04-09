@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="angr-simgr-monitor",
-    version="1.0.0",
+    version="1.1.0",
     description="Non-intrusive real-time monitor for angr SimulationManager",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

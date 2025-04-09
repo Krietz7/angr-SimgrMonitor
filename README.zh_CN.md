@@ -59,9 +59,16 @@ with monitored_simgr():  # <-- 核心装饰器
 
 ### 进阶配置
 ```python
-REFRESH_TIME_PER_SECOND = (int)           # 监控刷新频率（毫秒）
-TIMER_ACCURATE_TO_MILLISECONDS = (bool)   # 是否启用毫秒时间统计精度
-BLOCK_EXECUTION_COUNTS_DISPLAY = (int)    # 显示聚集代码数量
-CALLSTACK_COUNTS_DISPLAY = (int)          # 显示调用栈类型数量
+# 监控每秒刷新频率，若要降低该工具对性能影响，请尽量调低该配置项
+REFRESH_TIME_PER_SECOND = (int)
+
+# 是否启用毫秒时间统计精度
+TIMER_ACCURATE_TO_MILLISECONDS = (bool)
+
+# 显示聚集代码数量
+BLOCK_EXECUTION_COUNTS_DISPLAY = (int)
+
+# 显示调用栈类型数量
+CALLSTACK_COUNTS_DISPLAY = (int)
 ```
 
