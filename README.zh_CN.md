@@ -24,6 +24,7 @@
 - Python 版本 >= 3.10
 - `angr` 版本 >= 9.0
 - `aspectlib` 模块
+- `psutil` 模块
 - `rich` 模块
 
 ### 安装

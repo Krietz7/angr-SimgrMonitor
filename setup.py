@@ -11,7 +11,8 @@ setup(
     install_requires=[
         "angr>=9.0",
         "aspectlib>=1.5",
-        "rich>=12.0"
+        "rich>=12.0",
+        "psutil>=5.9"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

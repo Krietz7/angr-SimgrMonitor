@@ -6,9 +6,10 @@ import logging
 import time
 import threading
 from os import getpid
-from psutil import Process
+from functools import wraps
 from collections import Counter, defaultdict
 
+from psutil import Process
 import rich
 from queue import Queue, Empty
 import aspectlib
@@ -381,7 +382,7 @@ class SimgrInfo():
     @staticmethod
     def _get_memory_usage():
         process = Process(getpid())
-        memory_usage = process.memory_info().vms / float(2 ** 30)
+        memory_usage = process.memory_info().rss / float(2 ** 30)
         return '{:.4f}'.format(memory_usage) + " GB"
 
     @classmethod

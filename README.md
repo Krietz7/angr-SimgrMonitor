@@ -27,6 +27,7 @@ This tool is designed to help users detect common symbolic execution risks early
 - Python version >= 3.10
 - `angr` version >= 9.0
 - `aspectlib` module
+- `psutil` module
 - `rich` module
 
 ### Installation
