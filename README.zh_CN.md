@@ -1,5 +1,5 @@
 ## angr-SimgrMonitor
-这是一个专为 angr 框架设计的非侵入式监控工具，可实时追踪 SimulationManager 的执行状态。通过装饰器模式集成，无需修改原有代码即可获取关键运行时指标，并通过 rich 库输出实时监控界面。
+这是一个专为 angr 框架设计的非侵入式监控工具，可实时追踪 SimulationManager 的执行状态。通过装饰器模式集成，无需修改原有代码即可获取关键运行时指标，并通过 `rich` 库输出实时监控界面。
 
 该工具旨在通过实时监控来帮助用户尽早发现常见的符号执行问题并确定优化方案，包括：
 - 路径爆炸
@@ -21,11 +21,26 @@
 - 符号变量统计：统计并分析不同符号变量的约束复杂度
 
 ### 依赖
+- Python 版本 >= 3.10
+- `angr` 版本 >= 9.0
 - `aspectlib` 模块
 - `rich` 模块
 
+### 安装
+
+``` python
+# 克隆仓库
+git clone https://github.com/Krietz7/angr-SimgrMonitor
+cd angr-SimgrMonitor
+
+# 安装（自动处理依赖）
+pip install .
+```
+
+除此之外，您也可以将"angr_simgr_monitor.py"文件复制到当前目录或将其路径添加到环境变量"PYTHONPATH"中以使用该工具
+
+
 ### 快速开始
-要使用此脚本，您应该将"angr_simgr_monitor.py"文件复制到当前目录或将其路径添加到环境变量"PYTHONPATH"中
 
 ```python
 import angr

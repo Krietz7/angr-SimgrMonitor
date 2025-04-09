@@ -2,7 +2,7 @@
 
 [中文](README.zh_CN.md)
 
-A non-intrusive monitoring tool for angr framework, designed to track the execution status of `SimulationManager` in real-time. Integrated via decorator pattern, it requires no code modification to collect critical runtime metrics, with real-time visualization powered by rich library.
+A non-intrusive monitoring tool for angr framework, designed to track the execution status of `SimulationManager` in real-time. Integrated via decorator pattern, it requires no code modification to collect critical runtime metrics, with real-time visualization powered by `rich` library.
 
 This tool is designed to help users detect common symbolic execution risks early and identify optimization solutions through real-time monitoring, including:
 - Path Explosion
@@ -24,11 +24,25 @@ This tool is designed to help users detect common symbolic execution risks early
 - Symbol variable statistics: statistics and analyze the constraint complexity of different symbol variables
 
 ### Dependencies
+- Python version >= 3.10
+- `angr` version >= 9.0
 - `aspectlib` module
 - `rich` module
 
+### Installation
+```python
+# Clone repository
+git clone https://github.com/yourusername/angr-simgr-monitor.git
+cd angr-simgr-monitor
+
+# Install (auto-handles dependencies)
+pip install .
+```
+
+In addition, you can also copy "angr_simgr_monitor.py" file to the current directory or add it's path to environment variable "PYTHONPATH" to use the tool
+
 ### Quick Start
-To use this script, you should copy "angr_simgr_monitor.py" file to the current directory or add it's path to environment variable "PYTHONPATH"
+
 
 ```python
 import angr

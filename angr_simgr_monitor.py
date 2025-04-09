@@ -118,12 +118,12 @@ class SimgrCLI():
             ("[Time]", THEME["title"]), (time_str, THEME["highlight"]),
             (" │ ", THEME["separator"]),
             ("[Memory usage]", THEME["title"]), (self.simgr_info.memory_usage, THEME["warning"]),
-            ("\n\n", THEME["separator"])
+            ("\n", THEME["separator"])
         ]
 
         # --------------------- Stash Information ---------------------
         display_content += [
-            ("[SIMGR STASH STATUS]\n", THEME["title"]),
+            ("[SIMGR STASH STATUS] ", THEME["title"]),
             (self.simgr_info.simgr_text, THEME["metric"]),
             ("\n" + "─" * 80 + "\n", THEME["separator"])
         ]
