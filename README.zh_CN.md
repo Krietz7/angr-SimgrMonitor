@@ -56,6 +56,12 @@ sm = proj.factory.simulation_manager(init_state)
 with monitored_simgr():  # <-- 核心装饰器
     sm.run()             # 支持 run()/step()/explore() 等方法
 ```
+### 截图
+![image](https://github.com/user-attachments/assets/091f2363-671a-46ba-bddd-fab4be9d3722)
+
+更多信息，请查看: [Examples](./Examples)
+
+
 
 ### 进阶配置
 ```python
